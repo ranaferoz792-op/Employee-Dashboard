@@ -2,21 +2,25 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
+  CalendarCheck,
   FileText,
   Settings,
   Bell,
   Search,
   LogOut,
-  Briefcase,
   ClipboardList,
 } from "lucide-react";
 import Login from "../components/Login";
 import Signup from "../components/Signup";
 import OtpVerify from "../components/OtpVerify";
 import ApplicationStatus from "../components/ApplicationStatus";
+import AttendancePage from "../components/AttendancePage";
 import LeaveApplication from "../components/LeaveApplication";
 import DashboardContent from "../components/Dashboard";
+import BrandLogo from "../components/BrandLogo";
+import SettingsPage from "../components/SettingsPage";
 import { APIService } from "../services/api";
+import { pageRoutes } from "./-pagePaths";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -106,31 +110,33 @@ function Index() {
 
 /* --------------------------- DASHBOARD --------------------------- */
 function Dashboard({ onLogout, email }: { onLogout: () => void; email: string }) {
-  const [active, setActive] = useState("Dashboard");
+  const [active, setActive] = useState("Portal");
 
   const navItems = [
-    { name: "Dashboard", icon: LayoutDashboard },
+    { name: "Portal", icon: LayoutDashboard, path: pageRoutes.dashboard },
     //{ name: "Team", icon: Users },
    // { name: "Schedule", icon: Calendar },
     //{ name: "Documents", icon: FileText },
-    { name: "Leave Application", icon: ClipboardList },
-    { name: "Application Status", icon: FileText },
-    { name: "Settings", icon: Settings },
+    { name: "Leave Application", icon: ClipboardList, path: pageRoutes.leaveApplication },
+    { name: "Application Status", icon: FileText, path: pageRoutes.applicationStatus },
+    { name: "Attendance", icon: CalendarCheck, path: pageRoutes.attendance },
+    { name: "Settings", icon: Settings, path: "/settings" },
   ];
 
   const initials = (email.split("@")[0] || "user").slice(0, 2).toUpperCase();
+  const handleNavClick = (item: (typeof navItems)[number]) => {
+    setActive(item.name);
+  };
 
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="hidden w-64 shrink-0 border-r border-white/5 bg-[#0a0f1e] p-5 md:flex md:flex-col">
         <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
-            <Briefcase className="h-4 w-4 text-white" />
-          </div>
+          <BrandLogo size="sm" />
           <div>
             <p className="text-sm font-semibold">NumericSoft</p>
-            <p className="text-[10px] uppercase tracking-wider text-slate-500">Employee</p>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500">Employee Portal</p>
           </div>
         </div>
 
@@ -141,7 +147,7 @@ function Dashboard({ onLogout, email }: { onLogout: () => void; email: string })
             return (
               <button
                 key={item.name}
-                onClick={() => { console.log('nav click', item.name); setActive(item.name); }}
+                onClick={() => handleNavClick(item)}
                 className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
                   isActive
                     ? "bg-gradient-to-r from-indigo-500/20 to-violet-500/10 text-white shadow-inner"
@@ -202,7 +208,7 @@ function Dashboard({ onLogout, email }: { onLogout: () => void; email: string })
             return (
               <button
                 key={item.name}
-                onClick={() => { console.log('nav click', item.name); setActive(item.name); }}
+                onClick={() => handleNavClick(item)}
                 className={`rounded-full border px-3 py-2 text-xs font-medium transition ${
                   isActive
                     ? "border-indigo-400 bg-indigo-500/10 text-white"
@@ -220,6 +226,10 @@ function Dashboard({ onLogout, email }: { onLogout: () => void; email: string })
           <LeaveApplication />
         ) : active === "Application Status" ? (
           <ApplicationStatus />
+        ) : active === "Attendance" ? (
+          <AttendancePage />
+        ) : active === "Settings" ? (
+          <SettingsPage email={email} />
         ) : (
           <DashboardContent />
         )}

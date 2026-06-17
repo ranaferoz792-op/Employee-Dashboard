@@ -1,5 +1,5 @@
 // ============================================================================
-// 🔌 APIService: Employee Dashboard Data & Integration Hub
+// 🔌 APIService: Employee Portal Data & Integration Hub
 // ============================================================================
 // ENGLISH:
 // This file acts as the single source of truth for all data operations.
@@ -15,7 +15,7 @@
 
 
 // ============================================================================
-// 📋 1. JSON DATA CONTRACTS (Dashboard Data Structures)
+// 📋 1. JSON DATA CONTRACTS (Portal Data Structures)
 // ============================================================================
 
 export interface EmployeeProfileJSON {
@@ -41,6 +41,74 @@ export interface LeaveApplicationJSON {
   createdAt: string;
 }
 
+export type AttendanceStatType = "total" | "present" | "absent" | "leave";
+
+export interface AttendanceStatJSON {
+  label: string;
+  value: string;
+  type: AttendanceStatType;
+}
+
+export interface AttendanceSummaryJSON {
+  stats: AttendanceStatJSON[];
+  dateFilter: {
+    fromDatePlaceholder: string;
+    toDatePlaceholder: string;
+  };
+  percentage: number;
+}
+
+export type AttendanceRecordStatus = "Present" | "Absent" | "Leave";
+
+export interface AttendanceRecordJSON {
+  id: string;
+  date: string;
+  status: AttendanceRecordStatus;
+}
+
+export interface EmployeeSettingsJSON {
+  email: string;
+  password: string;
+  name: string;
+  employeeCode: string;
+  role: string;
+  department: string;
+}
+
+type JsonRecord = Record<string, unknown>;
+type StoredAccount = { email: string; password: string; verified: boolean };
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function readString(record: JsonRecord, keys: string[], fallback = "") {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim()) return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+  }
+  return fallback;
+}
+
+function readAttendanceType(value: unknown): AttendanceStatType {
+  return value === "present" || value === "absent" || value === "leave" || value === "total"
+    ? value
+    : "total";
+}
+
+function readPercentage(value: unknown, fallback: number) {
+  const numericValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numericValue)) return fallback;
+  return Math.min(Math.max(Math.round(numericValue), 0), 100);
+}
+
+function readAttendanceStatus(value: unknown): AttendanceRecordStatus {
+  return value === "Absent" || value === "Leave" || value === "Present"
+    ? value
+    : "Present";
+}
+
 // ============================================================================
 // 👵 2. LEGACY SYSTEM MAPPERS (Purane System ke Data ko Naye mein badalne ka tarika)
 // ============================================================================
@@ -52,13 +120,13 @@ export interface LeaveApplicationJSON {
  * Maps legacy employee profile JSON keys to the dashboard format.
  * Example: If your old system has "user_email" instead of "email", map it here!
  */
-export function mapLegacyProfileData(legacyProfile: any): EmployeeProfileJSON {
+export function mapLegacyProfileData(legacyProfile: JsonRecord): EmployeeProfileJSON {
   return {
-    email: legacyProfile.user_email || legacyProfile.email || "employee@numericsoft.com",
-    name: legacyProfile.full_name || legacyProfile.name || "Employee",
-    role: legacyProfile.job_title || legacyProfile.role || "Product Team",
-    department: legacyProfile.dept_name || legacyProfile.department || "Engineering",
-    employeeCode: legacyProfile.emp_id || legacyProfile.employeeCode || "EMP001",
+    email: readString(legacyProfile, ["user_email", "email"], "employee@numericsoft.com"),
+    name: readString(legacyProfile, ["full_name", "name"], "Employee"),
+    role: readString(legacyProfile, ["job_title", "role"], "Product Team"),
+    department: readString(legacyProfile, ["dept_name", "department"], "Engineering"),
+    employeeCode: readString(legacyProfile, ["emp_id", "employeeCode"], "EMP001"),
   };
 }
 
@@ -66,20 +134,60 @@ export function mapLegacyProfileData(legacyProfile: any): EmployeeProfileJSON {
  * Maps legacy leave records JSON keys to the dashboard format.
  * Example: If your old system uses "AppNo" instead of "applicationNo", map it here!
  */
-export function mapLegacyLeaveData(legacyLeave: any): LeaveApplicationJSON {
+export function mapLegacyLeaveData(legacyLeave: JsonRecord): LeaveApplicationJSON {
+  const rawStatus = readString(legacyLeave, ["CurrentStatus", "status"], "Pending");
+  const status =
+    rawStatus === "Approved" || rawStatus === "Rejected" || rawStatus === "Pending"
+      ? rawStatus
+      : "Pending";
+
   return {
-    applicationNo: legacyLeave.AppNo || legacyLeave.applicationNo || legacyLeave.id || "LV-UNKNOWN",
-    applicationDate: legacyLeave.ApplyDate || legacyLeave.applicationDate || new Date().toISOString().slice(0, 10),
-    employeeCode: legacyLeave.EmpCode || legacyLeave.employeeCode || "EMP001",
-    employeeName: legacyLeave.EmpName || legacyLeave.employeeName || legacyLeave.employee || "Employee",
-    leaveType: legacyLeave.LType || legacyLeave.leaveType || "annual",
-    startDate: legacyLeave.FromDate || legacyLeave.startDate || legacyLeave.fromDate || "",
-    endDate: legacyLeave.ToDate || legacyLeave.endDate || legacyLeave.toDate || "",
-    startTime: legacyLeave.TimeStart || legacyLeave.startTime || "",
-    endTime: legacyLeave.TimeEnd || legacyLeave.endTime || "",
-    reason: legacyLeave.Remarks || legacyLeave.reason || legacyLeave.comments || "",
-    status: legacyLeave.CurrentStatus || legacyLeave.status || "Pending",
-    createdAt: legacyLeave.created_at || legacyLeave.createdAt || new Date().toISOString(),
+    applicationNo: readString(legacyLeave, ["AppNo", "applicationNo", "id"], "LV-UNKNOWN"),
+    applicationDate: readString(legacyLeave, ["ApplyDate", "applicationDate"], new Date().toISOString().slice(0, 10)),
+    employeeCode: readString(legacyLeave, ["EmpCode", "employeeCode"], "EMP001"),
+    employeeName: readString(legacyLeave, ["EmpName", "employeeName", "employee"], "Employee"),
+    leaveType: readString(legacyLeave, ["LType", "leaveType"], "annual"),
+    startDate: readString(legacyLeave, ["FromDate", "startDate", "fromDate"]),
+    endDate: readString(legacyLeave, ["ToDate", "endDate", "toDate"]),
+    startTime: readString(legacyLeave, ["TimeStart", "startTime"]),
+    endTime: readString(legacyLeave, ["TimeEnd", "endTime"]),
+    reason: readString(legacyLeave, ["Remarks", "reason", "comments"]),
+    status,
+    createdAt: readString(legacyLeave, ["created_at", "createdAt"], new Date().toISOString()),
+  };
+}
+
+export function mapLegacyAttendanceSummary(legacyAttendance: JsonRecord): AttendanceSummaryJSON {
+  const statsSource = Array.isArray(legacyAttendance.stats) ? legacyAttendance.stats : [];
+  const stats = statsSource.filter(isJsonRecord).map((item) => ({
+    label: readString(item, ["label"], "Attendance"),
+    value: readString(item, ["value"], "0"),
+    type: readAttendanceType(item.type),
+  }));
+
+  return {
+    stats: stats.length ? stats : DEFAULT_ATTENDANCE_SUMMARY.stats,
+    dateFilter: {
+      fromDatePlaceholder: readString(
+        isJsonRecord(legacyAttendance.dateFilter) ? legacyAttendance.dateFilter : {},
+        ["fromDatePlaceholder"],
+        DEFAULT_ATTENDANCE_SUMMARY.dateFilter.fromDatePlaceholder,
+      ),
+      toDatePlaceholder: readString(
+        isJsonRecord(legacyAttendance.dateFilter) ? legacyAttendance.dateFilter : {},
+        ["toDatePlaceholder"],
+        DEFAULT_ATTENDANCE_SUMMARY.dateFilter.toDatePlaceholder,
+      ),
+    },
+    percentage: readPercentage(legacyAttendance.percentage, DEFAULT_ATTENDANCE_SUMMARY.percentage),
+  };
+}
+
+export function mapLegacyAttendanceRecord(legacyAttendance: JsonRecord): AttendanceRecordJSON {
+  return {
+    id: readString(legacyAttendance, ["id", "attendanceId"], "ATT-UNKNOWN"),
+    date: readString(legacyAttendance, ["date", "attendanceDate"], new Date().toISOString().slice(0, 10)),
+    status: readAttendanceStatus(legacyAttendance.status),
   };
 }
 
@@ -103,6 +211,33 @@ const DEFAULT_LEAVE_BALANCES: Record<string, number> = {
   unpaid: 0,
 };
 
+const DEFAULT_ATTENDANCE_SUMMARY: AttendanceSummaryJSON = {
+  stats: [
+    { label: "Total Attendance", value: "22", type: "total" },
+    { label: "Present Days", value: "18", type: "present" },
+    { label: "Absent Days", value: "2", type: "absent" },
+    { label: "Leave Days", value: "2", type: "leave" },
+  ],
+  dateFilter: {
+    fromDatePlaceholder: "From Date",
+    toDatePlaceholder: "To Date",
+  },
+  percentage: 82,
+};
+
+const DEFAULT_ATTENDANCE_RECORDS: AttendanceRecordJSON[] = [
+  { id: "ATT-001", date: "2026-06-01", status: "Present" },
+  { id: "ATT-002", date: "2026-06-02", status: "Present" },
+  { id: "ATT-003", date: "2026-06-03", status: "Absent" },
+  { id: "ATT-004", date: "2026-06-04", status: "Present" },
+  { id: "ATT-005", date: "2026-06-05", status: "Leave" },
+  { id: "ATT-006", date: "2026-06-08", status: "Present" },
+  { id: "ATT-007", date: "2026-06-09", status: "Present" },
+  { id: "ATT-008", date: "2026-06-10", status: "Present" },
+  { id: "ATT-009", date: "2026-06-11", status: "Absent" },
+  { id: "ATT-010", date: "2026-06-12", status: "Present" },
+];
+
 // ============================================================================
 // 🔌 4. APIService (All Data Fetching, Submissions & Operations)
 // ============================================================================
@@ -110,17 +245,19 @@ const DEFAULT_LEAVE_BALANCES: Record<string, number> = {
 const AUTH_STORAGE_KEY = "employee-dashboard-session";
 const ACCOUNTS_STORAGE_KEY = "employee-dashboard-accounts";
 const LEAVE_STORAGE_KEY = "leave_applications_unified";
+const ATTENDANCE_STORAGE_KEY = "employee_attendance_summary";
+const ATTENDANCE_RECORDS_STORAGE_KEY = "employee_attendance_records";
 
-function getStoredAccounts() {
+function getStoredAccounts(): StoredAccount[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(ACCOUNTS_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed)
-      ? parsed.map((item: any) => ({
-          email: String(item.email || "").toLowerCase(),
-          password: String(item.password || ""),
+      ? parsed.filter(isJsonRecord).map((item) => ({
+          email: readString(item, ["email"]).toLowerCase(),
+          password: readString(item, ["password"]),
           verified: Boolean(item.verified),
         }))
       : [];
@@ -282,9 +419,66 @@ export const APIService = {
       if (!Array.isArray(parsedArray)) return [];
       
       // Map each item through our legacy mapper to guarantee naye and old schema compatibility!
-      return parsedArray.map((item: any) => mapLegacyLeaveData(item));
+      return parsedArray.filter(isJsonRecord).map((item) => mapLegacyLeaveData(item));
     } catch {
       return [];
+    }
+  },
+
+  async getAttendanceSummary(): Promise<AttendanceSummaryJSON> {
+    if (typeof window === "undefined") return DEFAULT_ATTENDANCE_SUMMARY;
+
+    try {
+      const raw = localStorage.getItem(ATTENDANCE_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(ATTENDANCE_STORAGE_KEY, JSON.stringify(DEFAULT_ATTENDANCE_SUMMARY));
+        return DEFAULT_ATTENDANCE_SUMMARY;
+      }
+
+      const parsed = JSON.parse(raw);
+      if (!isJsonRecord(parsed)) return DEFAULT_ATTENDANCE_SUMMARY;
+      return mapLegacyAttendanceSummary(parsed);
+    } catch {
+      return DEFAULT_ATTENDANCE_SUMMARY;
+    }
+  },
+
+  async getEmployeeSettings(email: string): Promise<EmployeeSettingsJSON> {
+    const normalizedEmail = email.toLowerCase();
+    const accounts = getStoredAccounts();
+    const account = accounts.find((item) => item.email === normalizedEmail);
+    const employeeEntries = Object.entries(DEFAULT_EMPLOYEES);
+    const employeeIndex = Math.max(
+      employeeEntries.findIndex(([code]) => normalizedEmail.includes(code.toLowerCase())),
+      0,
+    );
+    const [employeeCode, employeeName] = employeeEntries[employeeIndex] ?? ["EMP001", "Employee"];
+
+    return {
+      email: normalizedEmail || "employee@numericsoft.com",
+      password: account?.password ?? "",
+      name: employeeName,
+      employeeCode,
+      role: "Product Team",
+      department: "Engineering",
+    };
+  },
+
+  async getAllAttendance(): Promise<AttendanceRecordJSON[]> {
+    if (typeof window === "undefined") return DEFAULT_ATTENDANCE_RECORDS;
+
+    try {
+      const raw = localStorage.getItem(ATTENDANCE_RECORDS_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(ATTENDANCE_RECORDS_STORAGE_KEY, JSON.stringify(DEFAULT_ATTENDANCE_RECORDS));
+        return DEFAULT_ATTENDANCE_RECORDS;
+      }
+
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return DEFAULT_ATTENDANCE_RECORDS;
+      return parsed.filter(isJsonRecord).map((item) => mapLegacyAttendanceRecord(item));
+    } catch {
+      return DEFAULT_ATTENDANCE_RECORDS;
     }
   },
 

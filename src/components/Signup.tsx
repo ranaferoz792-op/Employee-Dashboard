@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Briefcase, Mail, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import AuthBackground from "./auth/AuthBackground";
+import BrandLogo from "./BrandLogo";
 import { APIService } from "../services/api";
 
 export type SignupProps = {
@@ -70,11 +71,9 @@ export default function Signup({ mode, email, setEmail, onContinue, onCancel }: 
       <div className="relative w-full max-w-md animate-[fadeUp_.6s_ease-out]">
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 shadow-2xl backdrop-blur-xl">
           <div className="mb-8 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
-              <Briefcase className="h-5 w-5 text-white" />
-            </div>
+            <BrandLogo />
             <div>
-              <h1 className="text-lg font-semibold">Employee Dashboard</h1>
+              <h1 className="text-lg font-semibold">Employee Portal</h1>
               <p className="text-xs text-slate-400">Employee Portal</p>
             </div>
           </div>

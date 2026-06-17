@@ -5,6 +5,7 @@ import AppShell from "./-AppShell";
 import Dashboard from "../components/Dashboard";
 import LeaveApplication from "../components/LeaveApplication";
 import ApplicationStatus from "../components/ApplicationStatus";
+import AttendancePage from "../components/AttendancePage";
 import { pageRoutes } from "./-pagePaths";
 
 function childPath(route: string) {
@@ -40,11 +41,19 @@ export const applicationStatusRoute = createRoute({
   path: childPath(pageRoutes.applicationStatus),
   component: ApplicationStatus,
 });
+
+export const attendanceRoute = createRoute({
+  getParentRoute: () => appShellRoute,
+  path: childPath(pageRoutes.attendance),
+  component: AttendancePage,
+});
+
 export const routeTree = rootRoute.addChildren([
   IndexRoute,
   appShellRoute.addChildren([
     dashboardRoute,
     leaveApplicationRoute,
     applicationStatusRoute,
+    attendanceRoute,
   ]),
 ]);

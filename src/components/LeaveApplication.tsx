@@ -1,10 +1,9 @@
 import React, { useState, useRef } from "react";
 import {
-  ClipboardList,
   Upload,
   X,
-  Paperclip,
 } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 import { APIService } from "../services/api";
 
 const LEAVE_BALANCES: Record<string, string> = {
@@ -177,10 +176,10 @@ export default function LeaveApplication({ onClose }: LeaveApplicationProps) {
 
       <div className="mx-auto max-w-5xl rounded-2xl border border-white/10 bg-white/[0.03]">
         <header className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-          <h1 className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-            <ClipboardList className="h-4 w-4" />
-            Leave Application
-          </h1>
+          <div className="flex items-center gap-3">
+            <BrandLogo size="sm" />
+            <h1 className="text-sm font-semibold text-slate-100">Leave Application</h1>
+          </div>
 
           <button onClick={handleClose} className="text-slate-400">
             <X className="h-4 w-4" />

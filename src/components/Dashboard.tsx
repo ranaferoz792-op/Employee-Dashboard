@@ -1,5 +1,6 @@
 import React from "react";
 import { Clock, CheckCircle2, FileText, TrendingUp } from "lucide-react";
+import AttendanceCard from "./AttendanceCard";
 import LeaveStatus from "./LeaveStatus";
 
 function getGreeting() {
@@ -55,6 +56,7 @@ export default function DashboardContent() {
         })}
       </div> */}
 
+      {/* <AttendanceCard /> */}
       <LeaveStatus variant="dashboard" />
     </div>
   );

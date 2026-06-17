@@ -1,4 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
+import BrandLogo from "../components/BrandLogo";
 import { navItems } from "./-pagePaths";
 
 export default function AppShell() {
@@ -6,7 +7,10 @@ export default function AppShell() {
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="grid min-h-screen grid-cols-[240px_1fr]">
         <aside className="border-r border-slate-800 bg-slate-900 p-4">
-          <div className="mb-8 px-2 text-lg font-semibold">Employee Dashboard</div>
+          <div className="mb-8 flex items-center gap-3 px-2">
+            <BrandLogo size="sm" />
+            <div className="text-lg font-semibold">Employee Portal</div>
+          </div>
           <nav className="space-y-2">
             {navItems.map((item) => (
               <Link
@@ -24,7 +28,7 @@ export default function AppShell() {
               to="/"
               className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white"
             >
-              Sign out
+              Back to Home
             </Link>
           </div>
         </aside>
